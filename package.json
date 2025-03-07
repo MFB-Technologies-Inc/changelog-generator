@@ -16,7 +16,7 @@
     "check-formatting": "npx prettier --check src/",
     "test": "npx jest --watch",
     "test:ci": "npx jest --collectCoverage --forceExit",
-    "package": "node ./scripts/package.js"
+    "package": "node ./scripts/package.cjs"
   },
   "files": [
     "out/"
