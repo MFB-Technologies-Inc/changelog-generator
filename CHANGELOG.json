@@ -1,0 +1,16 @@
+{
+  "name": "@mfbtech/changelog-generator",
+  "entries": [
+    {
+      "version": "1.0.0",
+      "date": "Fri, 10 Jan 2025 20:40:53 GMT",
+      "comments": {
+        "NONE": [
+          {
+            "comment": ""
+          }
+        ]
+      }
+    }
+  ]
+}

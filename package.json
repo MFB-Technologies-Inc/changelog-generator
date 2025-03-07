@@ -1,0 +1,71 @@
+{
+  "name": "@mfbtech/changelog-generator",
+  "version": "1.0.0",
+  "description": "A changelog generator not authored by git data but by the developer implementing the fix, feature, breaking change, ...",
+  "main": "./out/index.cjs",
+  "bin": {
+    "ccg": "./out/index.cjs"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "rollup --config rollup.config.js",
+    "ccg": "node ./out/index.cjs",
+    "lint": "npx eslint --fix ./src/",
+    "check-linting": "npx eslint ./src/",
+    "format": "npx prettier --write src/",
+    "check-formatting": "npx prettier --check src/",
+    "test": "npx jest --watch",
+    "test:ci": "npx jest --collectCoverage --forceExit",
+    "package": "node ./scripts/package.js"
+  },
+  "files": [
+    "out/"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MFB-Technologies-Inc/changelog-generator.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MFB-Technologies-Inc/changelog-generator/issues"
+  },
+  "homepage": "https://github.com/MFB-Technologies-Inc/changelog-generator#readme",
+  "keywords": [
+    "changelog",
+    "generator",
+    "cli",
+    "semver",
+    "changelog-generator",
+    "changeset",
+    "changelist",
+    "npm",
+    "changes",
+    "node",
+    "markdown",
+    "json"
+  ],
+  "author": "MFB Technologies, Inc.",
+  "license": "MIT",
+  "devDependencies": {
+    "@rollup/plugin-typescript": "11.1.6",
+    "@types/jest": "29.5.13",
+    "@types/node": "20.14.12",
+    "@types/semver": "7.5.8",
+    "@types/json2md": "1.5.4",
+    "@typescript-eslint/eslint-plugin": "7.17.0",
+    "@typescript-eslint/parser": "7.17.0",
+    "eslint": "8.57.0",
+    "eslint-config-prettier": "9.1.0",
+    "jest": "29.7.0",
+    "prettier": "3.3.3",
+    "rollup": "4.24.0",
+    "ts-jest": "29.2.5",
+    "tslib": "2.7.0",
+    "typescript": "5.5.4"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "6.0.1",
+    "commander": "12.1.0",
+    "semver": "7.6.3",
+    "json2md": "2.0.1"
+  }
+}
