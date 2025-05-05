@@ -15,18 +15,34 @@ import {
 } from "./constants.js"
 import { publish } from "./commands/publish.js"
 
+// Add global handler for unhandled promise rejections
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled promise rejection:", promise, "reason: ", reason)
+  process.exit(1)
+})
+
 const ccgProgram = new Command("ccg")
 
 ccgProgram
   .command(ChangeCommandName)
   .description(ChangeCommandDescription)
   .option(ChangeCommandOptionFlag.verify, ChangeCommandOptionDescription.verify)
-  .action(change)
+  .action(args => {
+    change(args).catch(e => {
+      console.error(e)
+      process.exit(1)
+    })
+  })
 
 ccgProgram
   .command(PublishCommandName)
   .description(PublishCommandDescription)
   .option(PublishCommandOptionFlag.apply, PublishCommandOptionDescription.apply)
-  .action(publish)
+  .action(args => {
+    publish(args).catch(e => {
+      console.error(e)
+      process.exit(1)
+    })
+  })
 
 ccgProgram.parse(process.argv)
