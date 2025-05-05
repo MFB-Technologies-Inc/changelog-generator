@@ -8,7 +8,7 @@
   "psi-header.templates": [
     {
       "language": "*",
-      "template": [" Copyright <<year>> <<company>>"]
+      "template": [" Copyright <<company>>"]
     }
   ],
   "psi-header.config": {

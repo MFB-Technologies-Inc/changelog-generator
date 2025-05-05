@@ -1,0 +1,9 @@
+{
+  "changes": [
+    {
+      "packageName": "@mfbtech/changelog-generator",
+      "comment": "Fix the sonar cloud step in the build action",
+      "type": "PATCH"
+    }
+  ]
+}
