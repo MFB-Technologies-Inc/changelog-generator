@@ -1,9 +1,0 @@
-{
-  "changes": [
-    {
-      "packageName": "@mfbtech/changelog-generator",
-      "comment": "Improve error messages and logging",
-      "type": "PATCH"
-    }
-  ]
-}
