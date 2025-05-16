@@ -1,6 +1,6 @@
 {
   "name": "@mfbtech/changelog-generator",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A changelog generator not authored by git data but by the developer implementing the fix, feature, breaking change, ...",
   "main": "./out/index.cjs",
   "bin": {

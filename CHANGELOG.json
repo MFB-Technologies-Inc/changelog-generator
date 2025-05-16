@@ -2,6 +2,25 @@
   "name": "@mfbtech/changelog-generator",
   "entries": [
     {
+      "version": "1.0.1",
+      "date": "Fri, 16 May 2025 13:01:28 GMT",
+      "comments": {
+        "PATCH": [
+          {
+            "comment": "Improve error messages and logging"
+          },
+          {
+            "comment": "Fix the sonar cloud step in the build action"
+          }
+        ],
+        "NONE": [
+          {
+            "comment": "Initial release"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.0",
       "date": "Fri, 10 Jan 2025 20:40:53 GMT",
       "comments": {

@@ -1,9 +1,0 @@
-{
-  "changes": [
-    {
-      "packageName": "@mfbtech/changelog-generator",
-      "comment": "Initial release",
-      "type": "NONE"
-    }
-  ]
-}
