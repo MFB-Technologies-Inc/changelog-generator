@@ -1,0 +1,9 @@
+{
+  "changes": [
+    {
+      "packageName": "@mfbtech/changelog-generator",
+      "comment": "Update the sonarqube github action to resolve a security vulnerability",
+      "type": "NONE"
+    }
+  ]
+}
