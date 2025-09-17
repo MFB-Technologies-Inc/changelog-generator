@@ -48,9 +48,9 @@
   "devDependencies": {
     "@rollup/plugin-typescript": "11.1.6",
     "@types/jest": "29.5.13",
+    "@types/json2md": "1.5.4",
     "@types/node": "20.14.12",
     "@types/semver": "7.5.8",
-    "@types/json2md": "1.5.4",
     "@typescript-eslint/eslint-plugin": "7.17.0",
     "@typescript-eslint/parser": "7.17.0",
     "eslint": "8.57.0",
@@ -63,9 +63,9 @@
     "typescript": "5.5.4"
   },
   "dependencies": {
-    "@inquirer/prompts": "6.0.1",
+    "@inquirer/prompts": "^7.8.6",
     "commander": "12.1.0",
-    "semver": "7.6.3",
-    "json2md": "2.0.1"
+    "json2md": "2.0.1",
+    "semver": "7.6.3"
   }
 }
