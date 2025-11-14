@@ -2,6 +2,25 @@
   "name": "@mfbtech/changelog-generator",
   "entries": [
     {
+      "version": "1.0.2",
+      "date": "Fri, 14 Nov 2025 16:14:00 GMT",
+      "comments": {
+        "NONE": [
+          {
+            "comment": "Use the proper sonarcloud github action for targeting the cloud instead of a self-hosted qube instance"
+          },
+          {
+            "comment": "Update the sonarqube github action to resolve a security vulnerability"
+          }
+        ],
+        "PATCH": [
+          {
+            "comment": "Upgrade @inquirer/prompts to resolve tmp vulnerability"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.1",
       "date": "Fri, 16 May 2025 13:01:28 GMT",
       "comments": {
