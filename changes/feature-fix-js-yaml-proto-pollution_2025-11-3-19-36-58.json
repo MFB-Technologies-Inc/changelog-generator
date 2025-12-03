@@ -1,0 +1,9 @@
+{
+  "changes": [
+    {
+      "packageName": "@mfbtech/changelog-generator",
+      "comment": "Update js-yaml to a secure version",
+      "type": "PATCH"
+    }
+  ]
+}
