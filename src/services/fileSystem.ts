@@ -40,7 +40,14 @@ export async function readJson(
   })
 }
 
-/** Overwrites/creates the file with the data. */
+/**
+ * Overwrites/creates the file with the data.
+ *
+ * The JSON is terminated with a newline: `JSON.stringify` does not add one, and
+ * a file that ends mid-line fails `prettier --check` (and the POSIX convention
+ * it follows) in consuming repos. That bit consumers on every `publish --apply`,
+ * whose rewritten `package.json` then failed their format gate.
+ */
 export async function writeJson(args: {
   path: string
   fileName: string
@@ -48,7 +55,7 @@ export async function writeJson(args: {
 }): Promise<void> {
   await ensureFullPathExists(args.path)
   return new Promise((resolve, reject) => {
-    const json = JSON.stringify(args.data, null, 2)
+    const json = `${JSON.stringify(args.data, null, 2)}\n`
     const fullPath = path.join(args.path, args.fileName)
     nodeFs.writeFile(fullPath, json, { encoding: "utf-8" }, err => {
       if (err !== null) {
