@@ -1,0 +1,9 @@
+{
+  "changes": [
+    {
+      "packageName": "@mfbtech/changelog-generator",
+      "comment": "Fix PR build pipeline: add Java 21 (Temurin) setup before the SonarCloud scan, upgrade actions/checkout and actions/setup-node to v4, and move CI to Node 20 with npm caching",
+      "type": "NONE"
+    }
+  ]
+}
