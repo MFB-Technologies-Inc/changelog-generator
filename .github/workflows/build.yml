@@ -39,6 +39,12 @@ jobs:
       - name: Run unit tests and generate report
         run: npm run test:ci
 
+      - name: Setup Java for SonarCloud scanner
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
         env:
