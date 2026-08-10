@@ -1,0 +1,9 @@
+{
+  "changes": [
+    {
+      "packageName": "@mfbtech/changelog-generator",
+      "comment": "Fix PR build pipeline: replace the deprecated sonarcloud-github-action with sonarqube-scan-action (Java 21 scanner runtime), upgrade actions/checkout and actions/setup-node to v4, and move CI to Node 20 with npm caching",
+      "type": "NONE"
+    }
+  ]
+}

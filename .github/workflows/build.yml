@@ -16,15 +16,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # Disabling shallow clone is recommended for improving relevancy of reporting
           fetch-depth: 0
 
       - name: Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: "16"
+          node-version: "20"
+          cache: npm
 
       - name: Install packages
         run: npm install
@@ -38,8 +39,12 @@ jobs:
       - name: Run unit tests and generate report
         run: npm run test:ci
 
+      # No setup-java step here on purpose: sonarqube-scan-action@v8 downloads the
+      # scanner CLI and runs it on its own provisioned JRE
+      # (`${scannerDir}/jre/bin/java`), ignoring JAVA_HOME. The Java 21 requirement is
+      # satisfied by the action version, not by the runner's Java.
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v2
+        uses: SonarSource/sonarqube-scan-action@v8
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed for PR decoration
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} # SonarCloud user/project analysis token
