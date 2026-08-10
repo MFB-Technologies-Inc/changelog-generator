@@ -39,7 +39,13 @@ jobs:
       - name: Run unit tests and generate report
         run: npm run test:ci
 
-      - name: Setup Java for SonarCloud scanner
+      # Present only to satisfy the acceptance criteria of issue #24. This does NOT
+      # supply the scanner's Java runtime: sonarqube-scan-action@v8 downloads the
+      # scanner CLI and runs it on its own provisioned JRE
+      # (`${scannerDir}/jre/bin/java`), ignoring JAVA_HOME. The Java 17 error was
+      # fixed by moving off the Docker-based sonarcloud-github-action@v2. Changing
+      # `java-version` here will not affect the scanner.
+      - name: Setup Java (not used by the SonarCloud scanner - see comment above)
         uses: actions/setup-java@v4
         with:
           distribution: temurin
