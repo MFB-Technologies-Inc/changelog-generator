@@ -104,3 +104,12 @@ dist
 .tern-port
 
 out/
+
+# Claude Code config. In the dev container this is a symlink into the
+# oss-devtools clone (oss-devtools/src/changelog-generator/.claude), which is
+# where it is versioned. Ignored here so the symlink stays out of git status.
+#
+# No trailing slash, deliberately: git records a symlink as mode 120000 — a
+# file, not a directory — so a `.claude/` pattern would NOT match the symlink
+# and it would show up as untracked (and could get committed).
+/.claude
