@@ -39,6 +39,9 @@ jobs:
       - name: Run unit tests and generate report
         run: npm run test:ci
 
+      - name: Test release validation and notes
+        run: node --test scripts/release.test.cjs
+
       # No setup-java step here on purpose: sonarqube-scan-action@v8 downloads the
       # scanner CLI and runs it on its own provisioned JRE
       # (`${scannerDir}/jre/bin/java`), ignoring JAVA_HOME. The Java 21 requirement is
