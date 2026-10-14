@@ -49,4 +49,4 @@ jobs:
           git push origin "$branch"
           gh pr create --base "$DEFAULT_BRANCH" --head "$branch" \
             --title "chore(release): v$version" \
-            --body "Generated with ccg publish --apply. Merge this PR using a merge commit, wait for the version tag workflow, then run publish with that tag when ready to release."
+            --body "Generated with ccg publish --apply. Merge this PR using a merge commit to automatically tag and publish the release to GitHub and npm."
