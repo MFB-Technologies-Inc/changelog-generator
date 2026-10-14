@@ -1,0 +1,52 @@
+name: version-bump
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: version-bump
+  cancel-in-progress: false
+
+jobs:
+  version-bump:
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run test:ci -- --runInBand
+      - name: Apply changes and open version bump PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        shell: bash
+        run: |
+          before=$(node -p "require('./package.json').version")
+          npm run ccg -- publish --apply
+          version=$(node -p "require('./package.json').version")
+          if [ "$before" = "$version" ]; then
+            echo "No version bump. Add a PATCH, MINOR, or MAJOR change file first."
+            exit 1
+          fi
+          npm install --package-lock-only --ignore-scripts
+          branch="release/v$version"
+          git switch -c "$branch"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json CHANGELOG.json CHANGELOG.md changes/
+          git commit -m "chore(release): v$version"
+          git push origin "$branch"
+          gh pr create --base "$DEFAULT_BRANCH" --head "$branch" \
+            --title "chore(release): v$version" \
+            --body "Generated with ccg publish --apply. Merge this PR using a merge commit, wait for the version tag workflow, then run publish with that tag when ready to release."
