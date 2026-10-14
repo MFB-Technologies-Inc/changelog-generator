@@ -22,10 +22,13 @@ jobs:
           fetch-depth: 0
 
       - name: Setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
+
+      - name: Install npm 11
+        run: npm install --global npm@11
 
       - name: Install packages
         run: npm install
@@ -38,6 +41,9 @@ jobs:
 
       - name: Run unit tests and generate report
         run: npm run test:ci
+
+      - name: Test release validation and notes
+        run: node --test scripts/release.test.cjs
 
       # No setup-java step here on purpose: sonarqube-scan-action@v8 downloads the
       # scanner CLI and runs it on its own provisioned JRE

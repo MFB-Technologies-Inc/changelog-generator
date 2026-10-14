@@ -23,10 +23,11 @@ USER $USERNAME
 RUN mkdir -p -m 0700 ~/.ssh
 RUN ssh-keyscan github.com >> ~/.ssh/known_hosts
 SHELL ["/bin/bash", "--login", "-c"]
-# install nvm with a specified version of node
+# install development tooling; package runtime compatibility is unchanged
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash \
 && . ~/.nvm/nvm.sh \
-&& nvm install --lts=iron
+&& nvm install 24 \
+&& npm install --global npm@11
 # clone repo
 RUN --mount=type=ssh,uid=1002 git clone git@github.com:MFB-Technologies-Inc/changelog-generator /home/$USERNAME/workspace/changelog-generator
 # set working dir
