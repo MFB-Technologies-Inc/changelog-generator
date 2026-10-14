@@ -90,9 +90,18 @@ in a single publish workflow.
 
 ### Repository setup
 
-- Configure the repository secret `NPM_TOKEN` with permission to publish
-  `@mfbtech/changelog-generator` (and an npm token/2FA configuration that permits
-  unattended publishing).
+- In the npm settings for `@mfbtech/changelog-generator`, add a GitHub Actions
+  **Trusted Publisher** with organization `MFB-Technologies-Inc`, repository
+  `changelog-generator`, and workflow filename `publish.yml`. Leave the environment
+  name empty (this workflow does not use a GitHub environment) and allow direct
+  `npm publish`. This package-side configuration must be saved before releasing.
+- Publishing uses GitHub OIDC with `id-token: write`, Node 24, and npm 11; no
+  `NPM_TOKEN` secret is required. Release dependency caching is disabled.
+  npm automatically generates provenance for this public repository. See
+  [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/).
+- After verifying trusted publishing works, npm recommends restricting package
+  publishing to require 2FA and disallow tokens. Remove the unused `NPM_TOKEN`
+  repository secret and revoke its token if it is no longer needed elsewhere.
 - In Settings → Actions → General, allow GitHub Actions to create pull requests.
   The bump workflow uses `GITHUB_TOKEN`; approve any approval-required PR checks.
   See [GitHub's workflow triggering documentation](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
