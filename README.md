@@ -84,8 +84,9 @@ Options:
 
 ## Publishing
 
-Releases use manually dispatched version-bump and publish workflows on the default
-branch, plus an automatic version-tag workflow after a bump PR merges. Version bumps can be merged independently of publishing.
+Run the version-bump workflow manually to prepare a PR. Merging that PR into the
+default branch automatically tags the merge commit and publishes to GitHub and npm
+in a single publish workflow.
 
 ### Repository setup
 
@@ -110,13 +111,13 @@ branch, plus an automatic version-tag workflow after a bump PR merges. Version b
    Commit messages do not control release validation.
    Do not rerun the bump workflow while a bump PR is open; finish or close it and
    delete its branch first.
-4. The **version-tag** workflow runs only after a same-repository
+4. The **publish** workflow starts automatically after a same-repository
    `release/v<version>` PR merges into the default branch. It validates the version
    increase and matching package, lockfile, and changelog versions, then creates
    `v<version>` at the PR's merge commit. It never moves an existing tag.
    A rerun accepts the same tag at the same commit without recreating it; a tag
    at another commit causes a failure. If tagging fails, fix the cause and rerun
-   that workflow before publishing.
+   that workflow. After tagging succeeds, the same workflow continues to publish.
 
 For a local preview, run `npm ci`, `npm run build`, then
 `npm run ccg -- publish`. Adding `--apply` writes the version and changelogs;
@@ -125,14 +126,12 @@ the lockfile. `ccg publish` prepares release metadata; it does not publish to np
 
 ### Publish a release
 
-1. After **version-tag** succeeds, run **Actions → publish → Run workflow** on
-   the default branch and enter the existing tag (for example, `v1.0.3`).
-   Later commits on the default branch do not prevent publishing that tag.
-2. The workflow checks out the tag and verifies that it matches the package version,
-   its commit is on the default branch, and package, lockfile, and changelog versions
-   agree. It builds and tests that exact commit, then packs it with `npm pack`.
-3. It creates a draft GitHub release from the existing tag. Publishing never
-   creates or moves tags.
+1. Merging the version bump PR starts the **publish** workflow; no second manual
+   action is needed. It creates the version tag once at the exact merge commit.
+2. The workflow verifies the tag matches the package version, its commit is on
+   the default branch, and package, lockfile, and changelog versions agree.
+   It builds and tests that exact commit, then packs it with `npm pack`.
+3. It creates a draft GitHub release from the version tag.
    Notes include every changelog version newer than the most recently published
    stable GitHub release, including intermediate unpublished bumps. With no
    prior release, all entries are included. NONE comments are omitted, matching
@@ -140,8 +139,14 @@ the lockfile. `ccg publish` prepares release metadata; it does not publish to np
 4. The same `.tgz` is uploaded to GitHub and published publicly to npm. Only after
    npm succeeds does the GitHub release become public.
 
-If publishing fails, inspect the workflow logs and fix the token or service issue,
-then rerun the failed workflow with the same tag. Draft assets can be replaced; an already published npm version is
-skipped so a failed GitHub finalization can finish. npm versions are immutable:
-if the published package itself is wrong, create a new change and version bump.
-A completed GitHub release cannot be published again by this workflow.
+If tagging or publishing fails, inspect the workflow logs and fix the cause, then
+rerun the failed workflow. Existing tags are reused only if they point to the same
+commit; they are never moved or recreated. After a tag exists, you can also run
+**Actions → publish → Run workflow** on the default branch and enter that tag
+(for example, `v1.0.3`) to retry publishing. Manual retries never create tags, and
+later default-branch commits do not prevent publishing the selected tag.
+
+Draft assets can be replaced; an already published npm version is skipped so a
+failed GitHub finalization can finish. npm versions are immutable: if the published
+package itself is wrong, create a new change and version bump. A completed GitHub
+release cannot be published again by this workflow.
