@@ -48,6 +48,8 @@ jobs:
           npm run check-linting
           npx tsc --noEmit
           npm run build
+          npm run test:ci -- --runInBand
+          node --test scripts/*.test.cjs
           npm run check-formatting
           npx prettier --check package.json
           branch="release/v$version"
