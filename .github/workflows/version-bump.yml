@@ -28,7 +28,6 @@ jobs:
         run: npm install --global npm@11
       - run: npm ci
       - run: npm run build
-      - run: npm run test:ci -- --runInBand
       - name: Apply changes and open version bump PR
         env:
           GH_TOKEN: ${{ github.token }}
@@ -44,6 +43,13 @@ jobs:
             exit 1
           fi
           npm install --package-lock-only --ignore-scripts
+          npx prettier --write package.json
+          node -e 'const fs = require("node:fs"); const read = p => JSON.parse(fs.readFileSync(p)); require("./scripts/release.cjs").validateMetadata(read("package.json").version, read("CHANGELOG.json"), read("package-lock.json"))'
+          npm run check-linting
+          npx tsc --noEmit
+          npm run build
+          npm run check-formatting
+          npx prettier --check package.json
           branch="release/v$version"
           git switch -c "$branch"
           git config user.name "github-actions[bot]"
