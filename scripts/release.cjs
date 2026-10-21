@@ -135,7 +135,8 @@ function main() {
     .flat()
     .filter(release => !release.draft && !release.prerelease)
   if (releases.some(release => release.tag_name === tag)) {
-    throw new Error("This GitHub release is already published.")
+    fs.appendFileSync(process.env.GITHUB_OUTPUT, "completed=true\n")
+    return
   }
   releases.sort((a, b) => b.published_at.localeCompare(a.published_at))
   const previousTag = releases[0]?.tag_name

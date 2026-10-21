@@ -68,13 +68,20 @@ jobs:
           RELEASE_TAG: ${{ steps.version.outputs.tag }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: node scripts/release.cjs
-      - run: npm run check-formatting
-      - run: npm run check-linting
-      - run: npm run build
-      - run: npm run test:ci -- --runInBand
-      - run: node --test scripts/*.test.cjs
-      - run: npm run package
+      - if: steps.release.outputs.completed != 'true'
+        run: npm run check-formatting
+      - if: steps.release.outputs.completed != 'true'
+        run: npm run check-linting
+      - if: steps.release.outputs.completed != 'true'
+        run: npm run build
+      - if: steps.release.outputs.completed != 'true'
+        run: npm run test:ci -- --runInBand
+      - if: steps.release.outputs.completed != 'true'
+        run: node --test scripts/*.test.cjs
+      - if: steps.release.outputs.completed != 'true'
+        run: npm run package
       - name: Publish verified artifact and finalize release
+        if: steps.release.outputs.completed != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.release.outputs.tag }}

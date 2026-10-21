@@ -160,5 +160,6 @@ the rebuilt package. A different artifact stops the workflow without replacement
 An already published npm version is skipped only when its registry integrity
 matches the package. The workflow also verifies npm integrity after publishing
 before making the GitHub release public. npm versions are immutable: if the published
-package itself is wrong, create a new change and version bump. A completed GitHub
-release cannot be published again by this workflow.
+package itself is wrong, create a new change and version bump. Retrying a completed GitHub
+release validates the tag and exits successfully without rebuilding or changing
+the published release.

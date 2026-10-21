@@ -152,3 +152,70 @@ test("rejects unsupported parent counts and non-increasing versions before taggi
       /must increase/
     )
 })
+
+test("completed release validates the tag and exits without generating notes", () => {
+  const fs = require("node:fs")
+  const path = require("node:path")
+  const vm = require("node:vm")
+  const source = fs.readFileSync(path.join(__dirname, "release.cjs"), "utf8")
+  const execute = (checkout = "release-commit") => {
+    const calls = []
+    const outputs = []
+    const module = { exports: {} }
+    const fakeRequire = name => {
+      if (name === "node:fs")
+        return {
+          readFileSync: file =>
+            JSON.stringify(
+              {
+                "package.json": { version: "1.0.3" },
+                "CHANGELOG.json": changelog,
+                "package-lock.json": lock
+              }[file]
+            ),
+          appendFileSync: (file, value) => outputs.push([file, value]),
+          writeFileSync: () =>
+            assert.fail("Completed releases must not regenerate notes")
+        }
+      if (name === "node:child_process")
+        return {
+          execFileSync: (command, args) => {
+            calls.push([command, ...args])
+            if (command === "gh")
+              return JSON.stringify([
+                [
+                  {
+                    tag_name: "v1.0.3",
+                    draft: false,
+                    prerelease: false
+                  }
+                ]
+              ])
+            if (args[0] === "rev-parse")
+              return args[1] === "HEAD" ? checkout : "release-commit"
+            if (args[0] === "merge-base") return ""
+            assert.fail("Unexpected command: " + args.join(" "))
+          }
+        }
+      return require(name)
+    }
+    fakeRequire.main = module
+    vm.runInNewContext(source, {
+      require: fakeRequire,
+      module,
+      process: {
+        argv: ["node", "release.cjs"],
+        env: {
+          RELEASE_TAG: "v1.0.3",
+          DEFAULT_BRANCH: "main",
+          GITHUB_OUTPUT: "output"
+        }
+      }
+    })
+    assert.deepEqual(outputs, [["output", "completed=true\n"]])
+    assert.equal(calls.at(-1)[0], "gh")
+    assert.ok(calls.some(call => call[1] === "merge-base"))
+  }
+  execute()
+  assert.throws(() => execute("wrong-commit"), /Checkout must match/)
+})
