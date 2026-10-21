@@ -71,11 +71,27 @@ test("tags a merged bump once and validates tags after later commits", () => {
     git("switch", "-c", "release/v1.0.3")
     writeVersion("1.0.3")
     git("commit", "-am", "Any bump message")
+    assert.throws(
+      () => createTag(git, "1.0.3", "release/v1.0.3"),
+      /two-parent merge commit/
+    )
     git("switch", "main")
     git("merge", "--no-ff", "release/v1.0.3", "-m", "Any merge message")
     const merged = git("rev-parse", "HEAD")
     assert.throws(() => createTag(git, "1.0.3", "release/v1.0.4"))
     assert.throws(() => createTag(git, "1.0.2", "release/v1.0.2"))
+    assert.throws(
+      () =>
+        createTag(
+          (...args) =>
+            args[0] === "show" && args[1] === "HEAD^2:package.json"
+              ? JSON.stringify({ version: "1.0.4" })
+              : git(...args),
+          "1.0.3",
+          "release/v1.0.3"
+        ),
+      /branch version/
+    )
     createTag(git, "1.0.3", "release/v1.0.3")
     const original = git("rev-parse", "refs/tags/v1.0.3")
     const calls = []
@@ -107,4 +123,32 @@ test("tags a merged bump once and validates tags after later commits", () => {
   } finally {
     fs.rmSync(dir, { recursive: true, force: true })
   }
+})
+
+test("rejects unsupported parent counts and non-increasing versions before tagging", () => {
+  const run =
+    (parents, previous = "1.0.2") =>
+    (...args) => {
+      if (args[0] === "rev-list") return parents
+      if (args[0] === "show")
+        return JSON.stringify({
+          version: args[1] === "HEAD^1:package.json" ? previous : "1.0.3"
+        })
+      assert.fail("Validation must stop before tag creation: " + args.join(" "))
+    }
+  for (const parents of ["head", "head parent", "head first second third"])
+    assert.throws(
+      () => createTag(run(parents), "1.0.3", "release/v1.0.3"),
+      /two-parent merge commit/
+    )
+  for (const previous of ["1.0.3", "1.0.4"])
+    assert.throws(
+      () =>
+        createTag(
+          run("head first second", previous),
+          "1.0.3",
+          "release/v1.0.3"
+        ),
+      /must increase/
+    )
 })

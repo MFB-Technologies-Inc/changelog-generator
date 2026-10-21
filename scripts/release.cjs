@@ -62,6 +62,15 @@ function releaseNotes(changelog, version, previous) {
 function createTag(git, version, branch) {
   if (branch !== "release/v" + version)
     throw new Error("Version bump branch does not match package version.")
+  const parents = git("rev-list", "--parents", "-n", "1", "HEAD").split(/\s+/)
+  if (parents.length !== 3)
+    throw new Error(
+      "Release requires a two-parent merge commit; squash and rebase merges are unsupported."
+    )
+  if (JSON.parse(git("show", "HEAD^2:package.json")).version !== version)
+    throw new Error(
+      "Merged release branch version must match the package version."
+    )
   const previous = JSON.parse(git("show", "HEAD^1:package.json")).version
   if (!semver.gt(version, previous))
     throw new Error("Merged PR must increase the package version.")
