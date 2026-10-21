@@ -122,7 +122,8 @@ in a single publish workflow.
    delete its branch first.
 4. The **publish** workflow starts automatically after a same-repository
    `release/v<version>` PR merges into the default branch. It validates the version
-   increase and matching package, lockfile, and changelog versions, then creates
+   increase and matching package, lockfile, and changelog versions, runs the build
+   and checks with read-only permissions, then creates
    `v<version>` at the PR's merge commit. It never moves an existing tag.
    A rerun accepts the same tag at the same commit without recreating it; a tag
    at another commit causes a failure. If tagging fails, fix the cause and rerun
@@ -136,10 +137,16 @@ the lockfile. `ccg publish` prepares release metadata; it does not publish to np
 ### Publish a release
 
 1. Merging the version bump PR starts the **publish** workflow; no second manual
-   action is needed. It creates the version tag once at the exact merge commit.
+   action is needed. The build job checks out the exact merge commit.
 2. The workflow verifies the tag matches the package version, its commit is on
    the default branch, and package, lockfile, and changelog versions agree.
-   It builds and tests that exact commit, then packs it with `npm pack`.
+   A read-only build job installs dependencies with lifecycle scripts disabled,
+   builds and tests that exact commit, then packs it with `npm pack`. It uploads
+   the tarball and release notes as a workflow artifact.
+   A separate publish job on a fresh runner downloads that artifact, revalidates
+   the release, and creates the remote version tag after the build succeeds.
+   Only this job has GitHub write and npm OIDC permissions. It installs no project
+   dependencies and never executes the tarball; publication uses `--ignore-scripts`.
 3. It creates a draft GitHub release from the version tag.
    Notes include every changelog version newer than the most recently published
    stable GitHub release, including intermediate unpublished bumps. With no

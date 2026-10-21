@@ -1,10 +1,22 @@
 const fs = require("node:fs")
 const path = require("node:path")
 const { execFileSync } = require("node:child_process")
-const semver = require("semver")
+// Publication only supports stable versions. Keep privileged tag validation
+// dependency-free; semver is loaded only for notes in the read-only build job.
+function stableVersion(version) {
+  if (
+    typeof version !== "string" ||
+    !/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(version)
+  )
+    throw new Error("Invalid package version: expected a stable version.")
+  const parts = version.split(".").map(Number)
+  if (!parts.every(Number.isSafeInteger))
+    throw new Error("Invalid package version.")
+  return parts
+}
 
 function validateMetadata(version, changelog, lock) {
-  if (!semver.valid(version)) throw new Error("Invalid package version.")
+  stableVersion(version)
   if (
     changelog.entries[0]?.version !== version ||
     lock.version !== version ||
@@ -17,6 +29,7 @@ function validateMetadata(version, changelog, lock) {
 }
 
 function releaseNotes(changelog, version, previous) {
+  const semver = require("semver")
   if (previous && (!semver.valid(previous) || !semver.lt(previous, version))) {
     throw new Error(
       "The previous release must be older than the package version."
@@ -59,7 +72,7 @@ function releaseNotes(changelog, version, previous) {
   )
 }
 
-function createTag(git, version, branch) {
+function createTag(git, version, branch, push = true) {
   if (branch !== "release/v" + version)
     throw new Error("Version bump branch does not match package version.")
   const parents = git("rev-list", "--parents", "-n", "1", "HEAD").split(/\s+/)
@@ -72,7 +85,12 @@ function createTag(git, version, branch) {
       "Merged release branch version must match the package version."
     )
   const previous = JSON.parse(git("show", "HEAD^1:package.json")).version
-  if (!semver.gt(version, previous))
+  const currentParts = stableVersion(version)
+  const previousParts = stableVersion(previous)
+  const difference = currentParts.findIndex(
+    (part, i) => part !== previousParts[i]
+  )
+  if (difference < 0 || currentParts[difference] < previousParts[difference])
     throw new Error("Merged PR must increase the package version.")
   const tag = "v" + version
   const ref = "refs/tags/" + tag
@@ -85,7 +103,7 @@ function createTag(git, version, branch) {
     return
   }
   git("tag", "-a", tag, "-m", tag)
-  git("push", "origin", ref)
+  if (push) git("push", "origin", ref)
 }
 
 function validateTag(git, tag, version, defaultBranch) {
@@ -112,15 +130,16 @@ function main() {
   const { version } = read("package.json")
   const changelog = read("CHANGELOG.json")
   validateMetadata(version, changelog, read("package-lock.json"))
-  if (process.argv[2] === "tag") {
+  const mode = process.argv[2]
+  if (mode === "tag" || mode === "prepare") {
     git(
       "merge-base",
       "--is-ancestor",
       "HEAD",
       "refs/remotes/origin/" + process.env.DEFAULT_BRANCH
     )
-    createTag(git, version, process.env.BUMP_BRANCH)
-    return
+    createTag(git, version, process.env.BUMP_BRANCH, mode === "tag")
+    if (mode === "tag") return
   }
   const tag = process.env.RELEASE_TAG
   validateTag(git, tag, version, process.env.DEFAULT_BRANCH)
@@ -136,6 +155,10 @@ function main() {
     .filter(release => !release.draft && !release.prerelease)
   if (releases.some(release => release.tag_name === tag)) {
     fs.appendFileSync(process.env.GITHUB_OUTPUT, "completed=true\n")
+    return
+  }
+  if (mode === "verify") {
+    fs.appendFileSync(process.env.GITHUB_OUTPUT, "tag=" + tag + "\n")
     return
   }
   releases.sort((a, b) => b.published_at.localeCompare(a.published_at))

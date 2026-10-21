@@ -20,7 +20,13 @@ const lock = { version: "1.0.3", packages: { "": { version: "1.0.3" } } }
 
 test("requires matching valid release metadata", () => {
   assert.doesNotThrow(() => validateMetadata("1.0.3", changelog, lock))
-  assert.throws(() => validateMetadata("invalid", changelog, lock))
+  for (const version of [
+    "invalid",
+    "1.0.3-beta.1",
+    "01.0.3",
+    "9007199254740992.0.0"
+  ])
+    assert.throws(() => validateMetadata(version, changelog, lock))
   assert.throws(() => validateMetadata("1.0.2", changelog, lock))
   assert.throws(() =>
     validateMetadata("1.0.3", changelog, { ...lock, version: "1.0.2" })
@@ -92,6 +98,10 @@ test("tags a merged bump once and validates tags after later commits", () => {
         ),
       /branch version/
     )
+    createTag(git, "1.0.3", "release/v1.0.3", false)
+    assert.equal(git("rev-parse", "v1.0.3^{commit}"), merged)
+    assert.equal(git("ls-remote", "--tags", "origin"), "")
+    git("tag", "-d", "v1.0.3")
     createTag(git, "1.0.3", "release/v1.0.3")
     const original = git("rev-parse", "refs/tags/v1.0.3")
     const calls = []
@@ -158,7 +168,7 @@ test("completed release validates the tag and exits without generating notes", (
   const path = require("node:path")
   const vm = require("node:vm")
   const source = fs.readFileSync(path.join(__dirname, "release.cjs"), "utf8")
-  const execute = (checkout = "release-commit") => {
+  const execute = (checkout = "release-commit", mode) => {
     const calls = []
     const outputs = []
     const module = { exports: {} }
@@ -204,7 +214,7 @@ test("completed release validates the tag and exits without generating notes", (
       require: fakeRequire,
       module,
       process: {
-        argv: ["node", "release.cjs"],
+        argv: ["node", "release.cjs", mode],
         env: {
           RELEASE_TAG: "v1.0.3",
           DEFAULT_BRANCH: "main",
@@ -217,5 +227,92 @@ test("completed release validates the tag and exits without generating notes", (
     assert.ok(calls.some(call => call[1] === "merge-base"))
   }
   execute()
+  execute("release-commit", "verify")
   assert.throws(() => execute("wrong-commit"), /Checkout must match/)
+})
+
+// Exercise the privileged entry points with third-party module loading forbidden.
+test("tag and verify run without installed project dependencies", () => {
+  const fs = require("node:fs")
+  const path = require("node:path")
+  const vm = require("node:vm")
+  const source = fs.readFileSync(path.join(__dirname, "release.cjs"), "utf8")
+  for (const mode of ["tag", "verify"]) {
+    const calls = []
+    const outputs = []
+    const module = { exports: {} }
+    const fakeRequire = name => {
+      assert.ok(name.startsWith("node:"), "Unexpected dependency: " + name)
+      if (name === "node:fs")
+        return {
+          readFileSync: file =>
+            JSON.stringify(
+              {
+                "package.json": { version: "1.0.3" },
+                "CHANGELOG.json": changelog,
+                "package-lock.json": lock
+              }[file]
+            ),
+          appendFileSync: (file, value) => outputs.push(value),
+          writeFileSync: () =>
+            assert.fail("Privileged validation must not generate notes")
+        }
+      if (name === "node:child_process")
+        return {
+          execFileSync: (command, args) => {
+            calls.push([command, ...args])
+            if (command === "gh") return "[[]]"
+            if (args[0] === "rev-list") return "head first second"
+            if (args[0] === "show")
+              return JSON.stringify({
+                version: args[1] === "HEAD^1:package.json" ? "1.0.2" : "1.0.3"
+              })
+            if (args[0] === "rev-parse") return "head"
+            return ""
+          }
+        }
+      return require(name)
+    }
+    fakeRequire.main = module
+    vm.runInNewContext(source, {
+      require: fakeRequire,
+      module,
+      process: {
+        argv: ["node", "release.cjs", mode],
+        env: {
+          RELEASE_TAG: "v1.0.3",
+          DEFAULT_BRANCH: "main",
+          BUMP_BRANCH: "release/v1.0.3",
+          GITHUB_OUTPUT: "output"
+        }
+      }
+    })
+    assert.equal(
+      calls.some(call => call[1] === "push"),
+      mode === "tag"
+    )
+    assert.deepEqual(outputs, mode === "verify" ? ["tag=v1.0.3\n"] : [])
+  }
+})
+
+test("stable version increases compare major, minor, then patch numerically", () => {
+  for (const [previous, version, accepted] of [
+    ["1.9.9", "2.0.0", true],
+    ["1.9.9", "1.10.0", true],
+    ["1.0.9", "1.0.10", true],
+    ["2.0.0", "1.99.99", false],
+    ["1.10.0", "1.9.99", false]
+  ]) {
+    const git = (...args) => {
+      if (args[0] === "rev-list") return "head first second"
+      if (args[0] === "show")
+        return JSON.stringify({
+          version: args[1] === "HEAD^1:package.json" ? previous : version
+        })
+      return ""
+    }
+    const attempt = () => createTag(git, version, "release/v" + version, false)
+    if (accepted) assert.doesNotThrow(attempt)
+    else assert.throws(attempt, /must increase/)
+  }
 })
