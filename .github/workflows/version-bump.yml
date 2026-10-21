@@ -35,6 +35,7 @@ jobs:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         shell: bash
         run: |
+          node scripts/version-bump.cjs
           before=$(node -p "require('./package.json').version")
           npm run ccg -- publish --apply
           version=$(node -p "require('./package.json').version")
