@@ -27,7 +27,7 @@ SHELL ["/bin/bash", "--login", "-c"]
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash \
 && . ~/.nvm/nvm.sh \
 && nvm install 24 \
-&& npm install --global npm@11
+&& npm install --global npm@11.6.2
 # clone repo
 RUN --mount=type=ssh,uid=1002 git clone git@github.com:MFB-Technologies-Inc/changelog-generator /home/$USERNAME/workspace/changelog-generator
 # set working dir
