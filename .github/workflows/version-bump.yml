@@ -1,0 +1,64 @@
+name: version-bump
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: version-bump
+  cancel-in-progress: false
+
+jobs:
+  version-bump:
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install npm 11
+        run: npm install --global npm@11.6.2
+      - run: npm ci
+      - run: npm run build
+      - name: Apply changes and open version bump PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        shell: bash
+        run: |
+          node scripts/version-bump.cjs
+          before=$(node -p "require('./package.json').version")
+          npm run ccg -- publish --apply
+          version=$(node -p "require('./package.json').version")
+          if [ "$before" = "$version" ]; then
+            echo "No version bump. Add a PATCH, MINOR, or MAJOR change file first."
+            exit 1
+          fi
+          npm install --package-lock-only --ignore-scripts
+          npx prettier --write package.json
+          node -e 'const fs = require("node:fs"); const read = p => JSON.parse(fs.readFileSync(p)); require("./scripts/release.cjs").validateMetadata(read("package.json").version, read("CHANGELOG.json"), read("package-lock.json"))'
+          npm run check-linting
+          npx tsc --noEmit
+          npm run build
+          npm run test:ci -- --runInBand
+          node --test scripts/*.test.cjs
+          npm run check-formatting
+          npx prettier --check package.json
+          branch="release/v$version"
+          git switch -c "$branch"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json CHANGELOG.json CHANGELOG.md changes/
+          git commit -m "chore(release): v$version"
+          git push origin "$branch"
+          gh pr create --base "$DEFAULT_BRANCH" --head "$branch" \
+            --title "chore(release): v$version" \
+            --body "Generated with ccg publish --apply. Merge this PR using a merge commit to automatically tag and publish the release to GitHub and npm."
