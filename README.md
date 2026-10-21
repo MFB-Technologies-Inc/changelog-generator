@@ -155,7 +155,10 @@ commit; they are never moved or recreated. After a tag exists, you can also run
 (for example, `v1.0.3`) to retry publishing. Manual retries never create tags, and
 later default-branch commits do not prevent publishing the selected tag.
 
-Draft assets can be replaced; an already published npm version is skipped so a
-failed GitHub finalization can finish. npm versions are immutable: if the published
+Retries preserve existing draft assets and compare their SHA-512 checksum with
+the rebuilt package. A different artifact stops the workflow without replacement.
+An already published npm version is skipped only when its registry integrity
+matches the package. The workflow also verifies npm integrity after publishing
+before making the GitHub release public. npm versions are immutable: if the published
 package itself is wrong, create a new change and version bump. A completed GitHub
 release cannot be published again by this workflow.

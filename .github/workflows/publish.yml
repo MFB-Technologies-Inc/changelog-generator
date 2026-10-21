@@ -72,31 +72,10 @@ jobs:
       - run: npm run check-linting
       - run: npm run build
       - run: npm run test:ci -- --runInBand
-      - run: node --test scripts/release.test.cjs
+      - run: node --test scripts/*.test.cjs
       - run: npm run package
-      - name: Create draft release with package
+      - name: Publish verified artifact and finalize release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.release.outputs.tag }}
-        run: |
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release edit "$TAG" --notes-file "$RUNNER_TEMP/release-notes.md"
-            gh release upload "$TAG" packed/*.tgz --clobber
-          else
-            gh release create "$TAG" packed/*.tgz --verify-tag --draft \
-              --title "$TAG" --notes-file "$RUNNER_TEMP/release-notes.md"
-          fi
-      - name: Publish the packaged artifact to npm
-        run: |
-          version=$(node -p "require('./package.json').version")
-          npm view "@mfbtech/changelog-generator" versions --json > "$RUNNER_TEMP/npm-versions.json"
-          if node -e 'const versions = require(process.argv[1]); process.exit(versions.includes(process.argv[2]) ? 0 : 1)' "$RUNNER_TEMP/npm-versions.json" "$version"; then
-            echo "Version already on npm; completing the GitHub release."
-          else
-            npm publish packed/*.tgz --access public
-          fi
-      - name: Publish GitHub release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.release.outputs.tag }}
-        run: gh release edit "$TAG" --draft=false --latest
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: node scripts/publish.cjs
