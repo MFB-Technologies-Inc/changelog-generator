@@ -1,9 +1,0 @@
-{
-  "changes": [
-    {
-      "packageName": "@mfbtech/changelog-generator",
-      "comment": "Terminate every JSON file the CLI writes with a newline, so a consumer's `prettier --check` no longer fails on the `package.json` that `publish --apply` rewrites (#22)",
-      "type": "PATCH"
-    }
-  ]
-}

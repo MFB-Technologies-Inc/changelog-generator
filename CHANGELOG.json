@@ -2,6 +2,33 @@
   "name": "@mfbtech/changelog-generator",
   "entries": [
     {
+      "version": "1.0.3",
+      "date": "Thu, 22 Oct 2026 16:29:27 GMT",
+      "comments": {
+        "DEPENDENCY": [
+          {
+            "comment": "Upgrade minimatch, rollup, and other transitive dependencies to fix security vulnerabilities including CVE-2026-27903 (minimatch ReDoS)"
+          }
+        ],
+        "PATCH": [
+          {
+            "comment": "Terminate every JSON file the CLI writes with a newline, so a consumer's `prettier --check` no longer fails on the `package.json` that `publish --apply` rewrites (#22)"
+          },
+          {
+            "comment": "Update js-yaml to a secure version"
+          },
+          {
+            "comment": "Automate version bump pull requests and GitHub/npm releases with accumulated changelog notes, and document the release process."
+          }
+        ],
+        "NONE": [
+          {
+            "comment": "Fix PR build pipeline: replace the deprecated sonarcloud-github-action with sonarqube-scan-action (Java 21 scanner runtime), upgrade actions/checkout and actions/setup-node to v4, and move CI to Node 20 with npm caching"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.2",
       "date": "Fri, 14 Nov 2025 16:14:00 GMT",
       "comments": {

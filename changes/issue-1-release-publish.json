@@ -1,9 +1,0 @@
-{
-  "changes": [
-    {
-      "packageName": "@mfbtech/changelog-generator",
-      "comment": "Automate version bump pull requests and GitHub/npm releases with accumulated changelog notes, and document the release process.",
-      "type": "PATCH"
-    }
-  ]
-}
