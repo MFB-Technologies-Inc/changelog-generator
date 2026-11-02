@@ -166,7 +166,15 @@ Retries preserve existing draft assets and compare their SHA-512 checksum with
 the rebuilt package. A different artifact stops the workflow without replacement.
 An already published npm version is skipped only when its registry integrity
 matches the package. The workflow also verifies npm integrity after publishing
-before making the GitHub release public. npm versions are immutable: if the published
+before making the GitHub release public. If npm is still processing the version
+(HTTP 404), verification makes up to 10 lookups, waiting 15 seconds between them.
+Each registry request retains its 30-second timeout. An unavailable version after
+the final lookup produces a verification timeout; rerun **Actions → publish →
+Run workflow** on the default branch with the existing version tag after npm
+finishes processing. Polling does not repeat publication, and failures leave the
+GitHub release as a draft. An integrity mismatch or other registry error fails
+immediately with a separate error.
+npm versions are immutable: if the published
 package itself is wrong, create a new change and version bump. Retrying a completed GitHub
 release validates the tag and exits successfully without rebuilding or changing
 the published release.

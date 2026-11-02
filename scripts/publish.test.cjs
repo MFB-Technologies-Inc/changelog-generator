@@ -68,11 +68,97 @@ test("conflicting npm integrity blocks any release mutation", async () => {
   assert.deepEqual(calls, ["lookup"])
 })
 
-test("registry propagation or unexpected integrity prevents GitHub finalization", async () => {
-  const { calls, args } = publication()
-  args.lookup = async () => null
-  await assert.rejects(publishArtifact(args), /does not match/)
+function delayedPublication(results) {
+  const fixture = publication()
+  fixture.args.lookup = async () => {
+    fixture.calls.push("lookup")
+    assert.ok(results.length, "unexpected registry lookup")
+    const result = results.shift()
+    if (result instanceof Error) throw result
+    return result === "match" ? fixture.args.digest : result
+  }
+  fixture.args.wait = async ms => {
+    assert.equal(ms, 15000)
+    fixture.calls.push("wait")
+  }
+  return fixture
+}
+
+test("registry propagation retries verification without repeating publication", async () => {
+  const { calls, args } = delayedPublication([null, null, null, "match"])
+  await publishArtifact(args)
+  assert.deepEqual(calls, [
+    "lookup",
+    "upload",
+    "publish",
+    "lookup",
+    "wait",
+    "lookup",
+    "wait",
+    "lookup",
+    "finalize"
+  ])
+})
+
+test("an absent version exhausts the budget and reports retry instructions", async () => {
+  const { calls, args } = delayedPublication(Array(11).fill(null))
+  await assert.rejects(
+    publishArtifact(args),
+    /verification timed out after 10 lookups.*Rerun the publish workflow for the existing version tag/
+  )
+  assert.equal(calls.filter(call => call === "lookup").length, 11)
+  assert.equal(calls.filter(call => call === "wait").length, 9)
+  assert.equal(calls.filter(call => call === "publish").length, 1)
+  assert.equal(calls.filter(call => call === "upload").length, 1)
+  assert.equal(calls.at(-1), "lookup")
   assert.ok(!calls.includes("finalize"))
+})
+
+test("the final permitted lookup can still finalize the release", async () => {
+  const { calls, args } = delayedPublication([...Array(10).fill(null), "match"])
+  await publishArtifact(args)
+  assert.equal(calls.filter(call => call === "wait").length, 9)
+  assert.equal(calls.at(-1), "finalize")
+})
+
+test("post-publication integrity mismatch fails immediately, including after propagation", async () => {
+  for (const missing of [[], [null]]) {
+    const { calls, args } = delayedPublication([
+      null,
+      ...missing,
+      "sha512-other"
+    ])
+    await assert.rejects(publishArtifact(args), /does not match/)
+    assert.equal(calls.filter(call => call === "wait").length, missing.length)
+    assert.equal(calls.at(-1), "lookup")
+    assert.ok(!calls.includes("finalize"))
+  }
+})
+
+test("post-publication registry errors are preserved without retrying", async () => {
+  for (const message of [
+    "network",
+    "npm registry lookup failed: HTTP 403",
+    "npm returned invalid package metadata."
+  ]) {
+    const error = new Error(message)
+    const { calls, args } = delayedPublication([null, error])
+    await assert.rejects(publishArtifact(args), error)
+    assert.deepEqual(calls, ["lookup", "upload", "publish", "lookup"])
+  }
+})
+
+test("recovery also waits for a temporarily absent matching npm version without republishing", async () => {
+  const { calls, args } = delayedPublication(["match", null, "match"])
+  await publishArtifact(args)
+  assert.deepEqual(calls, [
+    "lookup",
+    "upload",
+    "lookup",
+    "wait",
+    "lookup",
+    "finalize"
+  ])
 })
 
 test("registry lookup only treats HTTP 404 as an absent version", async () => {
