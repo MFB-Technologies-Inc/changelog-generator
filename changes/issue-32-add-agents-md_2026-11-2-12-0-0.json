@@ -1,0 +1,9 @@
+{
+  "changes": [
+    {
+      "packageName": "@mfbtech/changelog-generator",
+      "comment": "Add AGENTS.md defining the agentic SDLC from issue to pull request.",
+      "type": "NONE"
+    }
+  ]
+}
