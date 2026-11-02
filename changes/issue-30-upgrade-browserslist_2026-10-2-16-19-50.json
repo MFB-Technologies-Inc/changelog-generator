@@ -1,0 +1,9 @@
+{
+  "changes": [
+    {
+      "packageName": "@mfbtech/changelog-generator",
+      "comment": "Upgrade transitive dev dependency browserslist to 4.29.5 to fix GHSA-73wf-gq98-2v4g (CVE-2026-73088)",
+      "type": "DEPENDENCY"
+    }
+  ]
+}
