@@ -3,6 +3,7 @@ const path = require("node:path")
 const os = require("node:os")
 const { createHash } = require("node:crypto")
 const { execFileSync } = require("node:child_process")
+const { setTimeout: delay } = require("node:timers/promises")
 const PACKAGE_NAME = "@mfbtech/changelog-generator"
 const run = (command, args) =>
   execFileSync(command, args, { encoding: "utf8" }).trim()
@@ -37,17 +38,36 @@ async function registryIntegrity(version, request = fetch) {
 }
 
 // Keep the publication sequence injectable so failures can be tested without publishing.
-async function publishArtifact({ digest, lookup, upload, publish, finalize }) {
+async function publishArtifact({
+  digest,
+  lookup,
+  upload,
+  publish,
+  finalize,
+  wait = delay
+}) {
   const existing = await lookup()
   if (existing && existing !== digest)
     throw new Error("Existing npm version has different artifact integrity.")
   await upload()
   if (!existing) await publish()
-  if ((await lookup()) !== digest)
-    throw new Error(
-      "Published npm integrity does not match the release artifact. Retry after registry propagation."
-    )
-  await finalize()
+  const attempts = 10
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    const published = await lookup()
+    if (published === digest) {
+      await finalize()
+      return
+    }
+    if (published !== null)
+      throw new Error(
+        "Published npm integrity does not match the release artifact."
+      )
+    if (attempt < attempts) await wait(15000)
+  }
+  throw new Error(
+    "npm verification timed out after 10 lookups: the published version is still unavailable. " +
+      "Rerun the publish workflow for the existing version tag after registry propagation."
+  )
 }
 
 function verifyDraftArtifact(artifact, assets, tag, command = run) {
