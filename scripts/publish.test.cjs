@@ -4,8 +4,37 @@ const PACKAGE_NAME = "@mfbtech/changelog-generator"
 const {
   integrity,
   registryIntegrity,
-  publishArtifact
+  publishArtifact,
+  VERIFY_WINDOW_MS,
+  VERIFY_FIRST_DELAY_MS,
+  VERIFY_MAX_DELAY_MS
 } = require("./publish.cjs")
+
+// The verification wait schedule, derived from the exported constants: the
+// delay doubles from the first delay up to the cap, and the last wait is cut
+// so the waits add up to exactly the window.
+function expectedDelays() {
+  for (const value of [
+    VERIFY_WINDOW_MS,
+    VERIFY_FIRST_DELAY_MS,
+    VERIFY_MAX_DELAY_MS
+  ]) {
+    assert.ok(
+      Number.isInteger(value) && value > 0,
+      "publish.cjs must export the verification window constants"
+    )
+  }
+  const delays = []
+  let waited = 0
+  let delayMs = VERIFY_FIRST_DELAY_MS
+  while (waited < VERIFY_WINDOW_MS) {
+    const ms = Math.min(delayMs, VERIFY_WINDOW_MS - waited)
+    delays.push(ms)
+    waited += ms
+    delayMs = Math.min(delayMs * 2, VERIFY_MAX_DELAY_MS)
+  }
+  return delays
+}
 
 function publication(options = {}) {
   const calls = []
@@ -77,15 +106,22 @@ function delayedPublication(results) {
     if (result instanceof Error) throw result
     return result === "match" ? fixture.args.digest : result
   }
+  fixture.waits = []
   fixture.args.wait = async ms => {
-    assert.equal(ms, 15000)
+    fixture.waits.push(ms)
     fixture.calls.push("wait")
   }
   return fixture
 }
 
 test("registry propagation retries verification without repeating publication", async () => {
-  const { calls, args } = delayedPublication([null, null, null, "match"])
+  const { calls, waits, args } = delayedPublication([
+    null,
+    null,
+    null,
+    null,
+    "match"
+  ])
   await publishArtifact(args)
   assert.deepEqual(calls, [
     "lookup",
@@ -96,28 +132,62 @@ test("registry propagation retries verification without repeating publication", 
     "lookup",
     "wait",
     "lookup",
+    "wait",
+    "lookup",
     "finalize"
   ])
+  assert.deepEqual(waits, [15000, 30000, 60000])
 })
 
-test("an absent version exhausts the budget and reports retry instructions", async () => {
-  const { calls, args } = delayedPublication(Array(11).fill(null))
+test("verification backs off within a window of at least 10 minutes", async () => {
+  const delays = expectedDelays()
+  assert.ok(VERIFY_WINDOW_MS >= 10 * 60 * 1000)
+  assert.equal(delays[0], VERIFY_FIRST_DELAY_MS)
+  assert.ok(delays.every(ms => ms <= VERIFY_MAX_DELAY_MS))
+  for (let i = 1; i < delays.length - 1; i++)
+    assert.ok(delays[i] >= delays[i - 1], "delays never shrink before the last")
+  assert.equal(
+    delays.reduce((sum, ms) => sum + ms, 0),
+    VERIFY_WINDOW_MS
+  )
+  const { waits, args } = delayedPublication(
+    Array(delays.length + 2).fill(null)
+  )
+  await assert.rejects(publishArtifact(args), /timed out/)
+  assert.deepEqual(waits, delays)
+})
+
+test("an absent version exhausts the window and reports retry instructions", async () => {
+  const delays = expectedDelays()
+  // One lookup before publishing, then one after each wait plus a final one.
+  const { calls, waits, args } = delayedPublication(
+    Array(delays.length + 2).fill(null)
+  )
   await assert.rejects(
     publishArtifact(args),
-    /verification timed out after 10 lookups.*Rerun the publish workflow for the existing version tag/
+    /verification timed out after 15 minutes.*Rerun the publish workflow for the existing version tag/
   )
-  assert.equal(calls.filter(call => call === "lookup").length, 11)
-  assert.equal(calls.filter(call => call === "wait").length, 9)
+  assert.equal(
+    calls.filter(call => call === "lookup").length,
+    delays.length + 2
+  )
+  assert.deepEqual(waits, delays)
   assert.equal(calls.filter(call => call === "publish").length, 1)
   assert.equal(calls.filter(call => call === "upload").length, 1)
   assert.equal(calls.at(-1), "lookup")
   assert.ok(!calls.includes("finalize"))
 })
 
-test("the final permitted lookup can still finalize the release", async () => {
-  const { calls, args } = delayedPublication([...Array(10).fill(null), "match"])
+test("a version that appears at the end of the window finalizes the release", async () => {
+  const delays = expectedDelays()
+  const { calls, waits, args } = delayedPublication([
+    ...Array(delays.length + 1).fill(null),
+    "match"
+  ])
   await publishArtifact(args)
-  assert.equal(calls.filter(call => call === "wait").length, 9)
+  assert.deepEqual(waits, delays)
+  assert.equal(calls.filter(call => call === "publish").length, 1)
+  assert.equal(calls.filter(call => call === "upload").length, 1)
   assert.equal(calls.at(-1), "finalize")
 })
 
@@ -149,8 +219,9 @@ test("post-publication registry errors are preserved without retrying", async ()
 })
 
 test("recovery also waits for a temporarily absent matching npm version without republishing", async () => {
-  const { calls, args } = delayedPublication(["match", null, "match"])
+  const { calls, waits, args } = delayedPublication(["match", null, "match"])
   await publishArtifact(args)
+  assert.deepEqual(waits, [VERIFY_FIRST_DELAY_MS])
   assert.deepEqual(calls, [
     "lookup",
     "upload",
@@ -186,11 +257,13 @@ test("registry lookup only treats HTTP 404 as an absent version", async () => {
     /invalid package/
   )
   assert.equal(
-    await registryIntegrity("2.2.3", async url => {
+    await registryIntegrity("2.2.3", async (url, options) => {
       assert.equal(
         url,
         "https://registry.npmjs.org/%40mfbtech%2Fchangelog-generator/2.2.3"
       )
+      assert.equal(options?.headers?.["Cache-Control"], "no-cache")
+      assert.equal(options?.cache, "no-store")
       return {
         ok: true,
         json: async () => ({
