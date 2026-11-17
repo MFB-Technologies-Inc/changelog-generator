@@ -32,7 +32,7 @@ jobs:
       completed: ${{ steps.release.outputs.completed }}
       artifact-id: ${{ steps.artifact.outputs.artifact-id }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -85,7 +85,7 @@ jobs:
       - name: Stage release notes
         if: steps.release.outputs.completed != 'true'
         run: cp "$RUNNER_TEMP/release-notes.md" packed/release-notes.md
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: steps.release.outputs.completed != 'true'
         id: artifact
         with:
@@ -103,7 +103,7 @@ jobs:
       contents: write
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || format('refs/tags/{0}', inputs.tag) }}
@@ -141,7 +141,7 @@ jobs:
           RELEASE_TAG: ${{ steps.version.outputs.tag }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: node scripts/release.cjs verify
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         if: steps.release.outputs.completed != 'true'
         with:
           artifact-ids: ${{ needs.build.outputs.artifact-id }}
