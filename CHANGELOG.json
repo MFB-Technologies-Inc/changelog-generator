@@ -2,6 +2,27 @@
   "name": "@mfbtech/changelog-generator",
   "entries": [
     {
+      "version": "1.0.4",
+      "date": "Tue, 17 Nov 2026 11:41:07 GMT",
+      "comments": {
+        "PATCH": [
+          {
+            "comment": "Wait for npm registry propagation before finalizing a published release."
+          }
+        ],
+        "DEPENDENCY": [
+          {
+            "comment": "Upgrade transitive dev dependency browserslist to 4.29.5 to fix GHSA-73wf-gq98-2v4g (CVE-2026-73088)"
+          }
+        ],
+        "NONE": [
+          {
+            "comment": "Add AGENTS.md defining the agentic SDLC from issue to pull request."
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.3",
       "date": "Thu, 22 Oct 2026 16:29:27 GMT",
       "comments": {
