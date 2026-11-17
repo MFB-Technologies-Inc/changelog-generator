@@ -3,7 +3,6 @@ const path = require("node:path")
 const os = require("node:os")
 const { createHash } = require("node:crypto")
 const { execFileSync } = require("node:child_process")
-const { setTimeout: delay } = require("node:timers/promises")
 const PACKAGE_NAME = "@mfbtech/changelog-generator"
 const run = (command, args) =>
   execFileSync(command, args, { encoding: "utf8" }).trim()
@@ -13,11 +12,6 @@ const getReleases = () =>
   ).flat()
 
 const REGISTRY = "https://registry.npmjs.org"
-// npm verification after publishing: back off from the first delay up to the
-// max delay until the waits add up to the window.
-const VERIFY_WINDOW_MS = 15 * 60 * 1000
-const VERIFY_FIRST_DELAY_MS = 15000
-const VERIFY_MAX_DELAY_MS = 60000
 const integrity = bytes =>
   "sha512-" + createHash("sha512").update(bytes).digest("base64")
 
@@ -45,44 +39,15 @@ async function registryIntegrity(version, request = fetch) {
 }
 
 // Keep the publication sequence injectable so failures can be tested without publishing.
-async function publishArtifact({
-  digest,
-  lookup,
-  upload,
-  publish,
-  finalize,
-  wait = delay
-}) {
+// npm can take minutes to serve a new version, so the release is finalized as
+// soon as `npm publish` succeeds instead of waiting for the registry.
+async function publishArtifact({ digest, lookup, upload, publish, finalize }) {
   const existing = await lookup()
   if (existing && existing !== digest)
     throw new Error("Existing npm version has different artifact integrity.")
   await upload()
   if (!existing) await publish()
-  let waited = 0
-  let delayMs = VERIFY_FIRST_DELAY_MS
-  let lookups = 0
-  for (;;) {
-    const published = await lookup()
-    lookups++
-    if (published === digest) {
-      await finalize()
-      return
-    }
-    if (published !== null)
-      throw new Error(
-        "Published npm integrity does not match the release artifact."
-      )
-    if (waited >= VERIFY_WINDOW_MS) break
-    const ms = Math.min(delayMs, VERIFY_WINDOW_MS - waited)
-    await wait(ms)
-    waited += ms
-    delayMs = Math.min(delayMs * 2, VERIFY_MAX_DELAY_MS)
-  }
-  throw new Error(
-    `npm verification timed out after ${VERIFY_WINDOW_MS / 60000} minutes (${lookups} lookups): ` +
-      "the published version is still unavailable. " +
-      "Rerun the publish workflow for the existing version tag after registry propagation."
-  )
+  await finalize()
 }
 
 function verifyDraftArtifact(artifact, assets, tag, command = run) {
@@ -183,9 +148,6 @@ async function main() {
 }
 
 module.exports = {
-  VERIFY_WINDOW_MS,
-  VERIFY_FIRST_DELAY_MS,
-  VERIFY_MAX_DELAY_MS,
   integrity,
   registryIntegrity,
   publishArtifact,

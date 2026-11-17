@@ -2,7 +2,7 @@
   "changes": [
     {
       "packageName": "@mfbtech/changelog-generator",
-      "comment": "Wait up to 15 minutes with backoff, and ask for uncached registry answers, when verifying an npm publish.",
+      "comment": "Make the GitHub release public as soon as npm publish succeeds, without waiting for registry propagation.",
       "type": "NONE"
     }
   ]
