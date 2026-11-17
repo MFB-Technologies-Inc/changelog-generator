@@ -1,0 +1,9 @@
+{
+  "changes": [
+    {
+      "packageName": "@mfbtech/changelog-generator",
+      "comment": "Move GitHub Actions workflows off Node.js 20 (checkout@v7, upload-artifact@v7, download-artifact@v8).",
+      "type": "NONE"
+    }
+  ]
+}
