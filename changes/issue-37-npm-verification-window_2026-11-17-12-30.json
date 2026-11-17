@@ -1,0 +1,9 @@
+{
+  "changes": [
+    {
+      "packageName": "@mfbtech/changelog-generator",
+      "comment": "Wait up to 15 minutes with backoff, and ask for uncached registry answers, when verifying an npm publish.",
+      "type": "NONE"
+    }
+  ]
+}

@@ -167,8 +167,9 @@ the rebuilt package. A different artifact stops the workflow without replacement
 An already published npm version is skipped only when its registry integrity
 matches the package. The workflow also verifies npm integrity after publishing
 before making the GitHub release public. If npm is still processing the version
-(HTTP 404), verification makes up to 10 lookups, waiting 15 seconds between them.
-Each registry request retains its 30-second timeout. An unavailable version after
+(HTTP 404), verification keeps looking it up for up to 15 minutes, waiting 15
+seconds after the first lookup and doubling the wait up to 60 seconds. Lookups
+ask npm for an uncached answer, and each keeps its 30-second timeout. An unavailable version after
 the final lookup produces a verification timeout; rerun **Actions → publish →
 Run workflow** on the default branch with the existing version tag after npm
 finishes processing. Polling does not repeat publication, and failures leave the

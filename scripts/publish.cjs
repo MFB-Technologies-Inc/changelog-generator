@@ -13,6 +13,11 @@ const getReleases = () =>
   ).flat()
 
 const REGISTRY = "https://registry.npmjs.org"
+// npm verification after publishing: back off from the first delay up to the
+// max delay until the waits add up to the window.
+const VERIFY_WINDOW_MS = 15 * 60 * 1000
+const VERIFY_FIRST_DELAY_MS = 15000
+const VERIFY_MAX_DELAY_MS = 60000
 const integrity = bytes =>
   "sha512-" + createHash("sha512").update(bytes).digest("base64")
 
@@ -20,6 +25,8 @@ async function registryIntegrity(version, request = fetch) {
   const response = await request(
     `${REGISTRY}/${encodeURIComponent(PACKAGE_NAME)}/${version}`,
     {
+      headers: { "Cache-Control": "no-cache" },
+      cache: "no-store",
       signal: AbortSignal.timeout(30000)
     }
   )
@@ -51,9 +58,12 @@ async function publishArtifact({
     throw new Error("Existing npm version has different artifact integrity.")
   await upload()
   if (!existing) await publish()
-  const attempts = 10
-  for (let attempt = 1; attempt <= attempts; attempt++) {
+  let waited = 0
+  let delayMs = VERIFY_FIRST_DELAY_MS
+  let lookups = 0
+  for (;;) {
     const published = await lookup()
+    lookups++
     if (published === digest) {
       await finalize()
       return
@@ -62,10 +72,15 @@ async function publishArtifact({
       throw new Error(
         "Published npm integrity does not match the release artifact."
       )
-    if (attempt < attempts) await wait(15000)
+    if (waited >= VERIFY_WINDOW_MS) break
+    const ms = Math.min(delayMs, VERIFY_WINDOW_MS - waited)
+    await wait(ms)
+    waited += ms
+    delayMs = Math.min(delayMs * 2, VERIFY_MAX_DELAY_MS)
   }
   throw new Error(
-    "npm verification timed out after 10 lookups: the published version is still unavailable. " +
+    `npm verification timed out after ${VERIFY_WINDOW_MS / 60000} minutes (${lookups} lookups): ` +
+      "the published version is still unavailable. " +
       "Rerun the publish workflow for the existing version tag after registry propagation."
   )
 }
@@ -168,6 +183,9 @@ async function main() {
 }
 
 module.exports = {
+  VERIFY_WINDOW_MS,
+  VERIFY_FIRST_DELAY_MS,
+  VERIFY_MAX_DELAY_MS,
   integrity,
   registryIntegrity,
   publishArtifact,
