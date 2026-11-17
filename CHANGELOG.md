@@ -1,6 +1,18 @@
 # Changelog - @mfbtech/changelog-generator
 
-This log was last generated on Thu, 22 Oct 2026 16:29:27 GMT and should not be manually modified.
+This log was last generated on Tue, 17 Nov 2026 11:41:07 GMT and should not be manually modified.
+
+## 1.0.4
+
+Tue, 17 Nov 2026 11:41:07 GMT
+
+### Dependency changes
+
+- Upgrade transitive dev dependency browserslist to 4.29.5 to fix GHSA-73wf-gq98-2v4g (CVE-2026-73088)
+
+### Patch changes
+
+- Wait for npm registry propagation before finalizing a published release.
 
 ## 1.0.3
 

@@ -1,9 +1,0 @@
-{
-  "changes": [
-    {
-      "packageName": "@mfbtech/changelog-generator",
-      "comment": "Wait for npm registry propagation before finalizing a published release.",
-      "type": "PATCH"
-    }
-  ]
-}
