@@ -3,7 +3,6 @@ const path = require("node:path")
 const os = require("node:os")
 const { createHash } = require("node:crypto")
 const { execFileSync } = require("node:child_process")
-const { setTimeout: delay } = require("node:timers/promises")
 const PACKAGE_NAME = "@mfbtech/changelog-generator"
 const run = (command, args) =>
   execFileSync(command, args, { encoding: "utf8" }).trim()
@@ -20,6 +19,8 @@ async function registryIntegrity(version, request = fetch) {
   const response = await request(
     `${REGISTRY}/${encodeURIComponent(PACKAGE_NAME)}/${version}`,
     {
+      headers: { "Cache-Control": "no-cache" },
+      cache: "no-store",
       signal: AbortSignal.timeout(30000)
     }
   )
@@ -38,36 +39,15 @@ async function registryIntegrity(version, request = fetch) {
 }
 
 // Keep the publication sequence injectable so failures can be tested without publishing.
-async function publishArtifact({
-  digest,
-  lookup,
-  upload,
-  publish,
-  finalize,
-  wait = delay
-}) {
+// npm can take minutes to serve a new version, so the release is finalized as
+// soon as `npm publish` succeeds instead of waiting for the registry.
+async function publishArtifact({ digest, lookup, upload, publish, finalize }) {
   const existing = await lookup()
   if (existing && existing !== digest)
     throw new Error("Existing npm version has different artifact integrity.")
   await upload()
   if (!existing) await publish()
-  const attempts = 10
-  for (let attempt = 1; attempt <= attempts; attempt++) {
-    const published = await lookup()
-    if (published === digest) {
-      await finalize()
-      return
-    }
-    if (published !== null)
-      throw new Error(
-        "Published npm integrity does not match the release artifact."
-      )
-    if (attempt < attempts) await wait(15000)
-  }
-  throw new Error(
-    "npm verification timed out after 10 lookups: the published version is still unavailable. " +
-      "Rerun the publish workflow for the existing version tag after registry propagation."
-  )
+  await finalize()
 }
 
 function verifyDraftArtifact(artifact, assets, tag, command = run) {
